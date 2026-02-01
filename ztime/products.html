@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ZTime</title>
+    <link href="styles.css" rel="stylesheet">
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // Navigasi Scroll Efek
+    let navBar = document.querySelector('nav');
+
+    document.addEventListener('scroll', () => {
+        if(window.scrollY > 0) {
+            navBar.style.boxShadow = '0 5px 20px rgba(190, 190, 190, 0.15)'
+        }
+        else {
+            navBar.style.boxShadow = 'none'
+        }
+    })
+ 
+    // PRODUK CARD DISPLAY
+ 
+    const productCardWidth = 290;
+
+    document.querySelectorAll('.product-section').forEach(section => {
+        const container = section.querySelector('.product-cards-container');
+        if (!container) return;
+
+        const cards = container.querySelectorAll('.product-card');
+        if (cards.length === 0) return;
+
+        const containerWidth = container.offsetWidth;
+        const perRow = Math.floor(containerWidth / (productCardWidth + 10));
+        const marginSpacing = Math.max((containerWidth - (perRow * productCardWidth)) / (perRow - 1), 10);
+        let lastVisible = perRow - 1;
+
+        cards.forEach((card, i) => {
+            if (i <= lastVisible) {
+                card.classList.add('active');
+                card.style.marginRight = (i === lastVisible) ? '0px' : `${marginSpacing}px`;
+            } else {
+                card.classList.remove('active');
+                card.style.marginRight = '0px';
+            }
+        });
+    });
+
+ 
+    // WISHLIST
+ 
+    const wishListCount = document.querySelector('#wishlist-link span');
+    document.querySelectorAll('.heart-button').forEach(button => {
+        button.addEventListener('click', () => {
+            button.classList.toggle('active');
+            wishListCount.textContent = document.querySelectorAll('.heart-button.active').length;
+        });
+    });
+
+ 
+    // ADD TO CART
+ 
+    const cartCount = document.querySelector('#cart-link span');
+    document.querySelectorAll('.product-card .blue-button').forEach(button => {
+        button.addEventListener('click', () => {
+            button.classList.toggle('active');
+            button.innerHTML = button.classList.contains('active') ? 'Remove' : 'Add To Cart';
+            cartCount.textContent = document.querySelectorAll('.product-card .blue-button.active').length;
+        });
+    });
+
+ 
+    // SLIDESHOW
+ 
+    document.querySelectorAll('.slideshow-button').forEach(button => {
+        button.addEventListener('click', () => {
+            // ambil data-slideshow dari container di atasnya
+            const sectionKey = button.closest('.slideshow-buttons-container').dataset.slideshow;
+            const section = document.querySelector(`#product-section-${sectionKey}`);
+            if (!section) return;
+
+            const container = section.querySelector('.product-cards-container');
+            const cards = container.querySelectorAll('.product-card');
+            if (cards.length === 0) return;
+
+            const containerWidth = container.offsetWidth;
+            const perRow = Math.floor(containerWidth / (productCardWidth + 10));
+            const marginSpacing = Math.max((containerWidth - (perRow * productCardWidth)) / (perRow - 1), 10);
+            let lastVisible = parseInt(container.dataset.lastVisible) || (perRow - 1);
+
+            if (button.classList.contains('prev-button')) {
+                lastVisible = (lastVisible <= (perRow - 1)) ? cards.length - 1 : lastVisible - 1;
+            } else if (button.classList.contains('next-button')) {
+                lastVisible = (lastVisible >= cards.length - 1) ? perRow - 1 : lastVisible + 1;
+            }
+
+            container.dataset.lastVisible = lastVisible;
+
+            cards.forEach((card, i) => {
+                if (i <= lastVisible && i >= (lastVisible - (perRow - 1))) {
+                    card.classList.add('active');
+                    card.style.marginRight = (i === lastVisible) ? '0px' : `${marginSpacing}px`;
+                } else {
+                    card.classList.remove('active');
+                    card.style.marginRight = '0px';
+                }
+            });
+        });
+    });
+
+    // CHECKOUT FUNCTIONALITY
+    const cartLink = document.querySelector('#cart-link');
+    const checkoutModal = document.querySelector('#checkout-modal');
+    const closeModalBtn = document.querySelector('#close-modal');
+    const checkoutBtn = document.querySelector('#checkout-btn');
+    const qrSection = document.querySelector('#qr-section');
+    const finishBtn = document.querySelector('#finish-checkout-btn');
+
+    cartLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const activeButtons = document.querySelectorAll('.product-card .blue-button.active');
+        
+        if (activeButtons.length === 0) {
+            alert('Keranjang belanja Anda kosong!');
+            return;
+        }
+
+        // Tampilkan produk di modal
+        const cartItemsList = document.querySelector('#cart-items-list');
+        cartItemsList.innerHTML = '';
+        let total = 0;
+
+        activeButtons.forEach(button => {
+            const productCard = button.closest('.product-card');
+            const productName = productCard.querySelector('.product-text-container h1').textContent;
+            const productPrice = productCard.querySelector('.product-text-container p').textContent;
+            const priceNumber = parseInt(productPrice.replace(/\D/g, ''));
+            
+            total += priceNumber;
+
+            const item = document.createElement('div');
+            item.className = 'cart-item';
+            item.innerHTML = `
+                <span>${productName}</span>
+                <span>${productPrice}</span>
+            `;
+            cartItemsList.appendChild(item);
+        });
+
+        document.querySelector('#total-price').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+        checkoutModal.style.display = 'flex';
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        checkoutModal.style.display = 'none';
+        qrSection.style.display = 'none';
+    });
+
+    checkoutBtn.addEventListener('click', () => {
+        qrSection.style.display = 'block';
+    });
+
+    finishBtn.addEventListener('click', () => {
+        alert('Terima kasih! Pesanan Anda telah berhasil diproses.');
+        
+        // Reset keranjang
+        document.querySelectorAll('.product-card .blue-button.active').forEach(button => {
+            button.classList.remove('active');
+            button.innerHTML = 'Add To Cart';
+        });
+        
+        cartCount.textContent = '0';
+        checkoutModal.style.display = 'none';
+        qrSection.style.display = 'none';
+    });
+
+    // Close modal saat klik di luar
+    checkoutModal.addEventListener('click', (e) => {
+        if (e.target === checkoutModal) {
+            checkoutModal.style.display = 'none';
+            qrSection.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<style>
+/* Checkout Modal Styles */
+#checkout-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+#close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 30px;
+    cursor: pointer;
+    color: #666;
+    background: none;
+    border: none;
+}
+
+#close-modal:hover {
+    color: #000;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 0;
+    font-weight: bold;
+    font-size: 18px;
+    border-top: 2px solid #333;
+    margin-top: 10px;
+}
+
+#checkout-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #4A90E2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+#checkout-btn:hover {
+    background-color: #357ABD;
+}
+
+#qr-section {
+    display: none;
+    margin-top: 30px;
+    text-align: center;
+}
+
+#qr-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+#qr-code {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 20px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+#finish-checkout-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#finish-checkout-btn:hover {
+    background-color: #45a049;
+}
+</style>
+
+</head>
+<body>
+    <nav>
+        <div id="navbar">
+            <div id="navbar-logo">
+                <img src="img/logo.png" alt="Ztime-logo">
+            </div>
+             <div id="navbar-links">
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            Home
+                        </a>
+                    </li>    
+                    <li>
+                        <a href="products.html">
+                            Produk
+                        </a>
+                    </li>    
+                    <li>
+                         <a href="#">
+                            Services
+                        </a>
+                    </li>    
+                    <li>
+                         <a href="#">
+                            About
+                        </a>
+                    </li>   
+                </ul>
+                <div id="navbar-tools">
+                    <a id="cart-link" href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bag" viewBox="0 0 16 16">
+                            <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
+                        </svg>
+                        <span>0</span>
+                    </a>
+                    <a id="wishlist-link" href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-bag-heart" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10.5 3.5a2.5 2.5 0 0 0-5 0V4h5zm1 0V4H15v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V4h3.5v-.5a3.5 3.5 0 1 1 7 0M14 14V5H2v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1M8 7.993c1.664-1.711 5.825 1.283 0 5.132-5.825-3.85-1.664-6.843 0-5.132"/>
+                        </svg>
+                        <span>0</span>
+                    </a>
+                </div>
+             </div>
+        </div>
+    </nav>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal">
+        <div class="modal-content">
+            <button id="close-modal">&times;</button>
+            <h2>Keranjang Belanja</h2>
+            <div id="cart-items-list"></div>
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="total-price">Rp 0</span>
+            </div>
+            <button id="checkout-btn">Checkout Sekarang</button>
+            
+            <div id="qr-section">
+                <h3>Scan QR Code untuk Pembayaran</h3>
+                <img id="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://ztime-payment.example.com/order-12345" alt="QR Code">
+                <p style="color: #666; margin: 15px 0;">Scan kode QR di atas dengan aplikasi pembayaran Anda</p>
+                <button id="finish-checkout-btn">Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Body Utama -->
+    <div id="product-page-body">
+
+        <!-- top section -->
+        <div id="product-top-container">
+            <div id="product-top-wrapper">
+                <div id="product-top-text-section">
+                    <h1>Produk Baru!</h1>
+                    <h2>Gold Black Watch</h2>
+                    <p>
+                        Ayo Segera dapatkan Jam Tangan Mewah dengan harga yang murah.
+                    </p>
+                    <button class="blue-button">
+                        Beli Sekarang
+                    </button>
+                </div>
+                <div id="product-top-image-section">
+                    <img src="img/jampria/jampria1.png" alt="Jam Mewah">
+                </div>
+            </div>
+        </div>
+        <!-- end top section -->
+
+        <!-- produk kategori -->
+         <div id="product-category-container">
+            <div id="product-category-text">
+                <span class="blue-line"></span>
+                <span class="section-category-text">Kategori</span>
+            </div>
+            <div id="product-category-wrapper">
+                <div class="product-category">
+                    <div class="product-category-image-section">
+                        <img src="img/allkategori.png" alt="gambar all kategori">
+                    </div>
+                    <div class="product-category-desc-section">
+                        <span class="product-category-type">
+                            All
+                        </span>
+                        <span class="product-category-number">
+                            20 items
+                        </span>
+                    </div>
+                </div>
+
+                <div class="product-category">
+                    <div class="product-category-image-section">
+                        <img src="img/jampria/jampria1.png" alt="jampria kategori">
+                    </div>
+                    <div class="product-category-desc-section">
+                        <span class="product-category-type">
+                            Pria
+                        </span>
+                        <span class="product-category-number">
+                            10 items
+                        </span>
+                    </div>
+                </div>
+
+                <div class="product-category">
+                    <div class="product-category-image-section">
+                        <img src="img/jamwanita/jamwanita1.png" alt="jamwanita kategori">
+                    </div>
+                    <div class="product-category-desc-section">
+                        <span class="product-category-type">
+                            Wanita
+                        </span>
+                        <span class="product-category-number">
+                            10 items
+                        </span>
+                    </div>
+                </div>
+            </div>
+         </div>
+         <!-- end produk kategori -->
+
+         <!-- produk card  all section-->
+          <div class="product-section" id="product-section-all">
+            <div class="product-section-top-container">
+                <div class="section-category-container">
+                    <div class="section-category-type">
+                        <span class="blue-line"></span>
+                        <span class="section-category-text">All Watch Wanita & Pria</span>
+                    </div>
+                    <h1>Best Sellers</h1>
+                </div>
+                <div class="slideshow-buttons-container" data-slideshow="all">
+                    <button class="slideshow-button prev-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M15 6L9 12L15 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                    <button class="slideshow-button next-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9 6L15 12L9 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- product card all container -->
+            <div class="product-cards-container">
+                <ul>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita1.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Gold Rose Watch</h1>
+                            <p>Rp 2.500.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                     <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria1.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Black Gold Watch</h1>
+                            <p>Rp 2.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria2.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Full Gold Watch</h1>
+                            <p>Rp 3.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria3.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Brown Watch</h1>
+                            <p>Rp 1.599.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria4.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Blue Silver Watch</h1>
+                            <p>Rp 1.499.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita2.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Gold Metal Watch</h1>
+                            <p>Rp 2.900.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    
+                </ul>
+            </div>
+            <!-- end product all section -->
+
+            <!-- product card section pria -->
+            <div class="product-section" id="product-section-pria">
+            <div class="product-section-top-container">
+                <div class="section-category-container">
+                    <div class="section-category-type">
+                        <span class="blue-line"></span>
+                        <span class="section-category-text">All Watch Pria</span>
+                    </div>
+                    <h1>Top Quality</h1>
+                </div>
+                <div class="slideshow-buttons-container" data-slideshow="pria">
+                    <button class="slideshow-button prev-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M15 6L9 12L15 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                    <button class="slideshow-button next-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9 6L15 12L9 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- product card pria container -->
+            <div class="product-cards-container">
+                <ul>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria1.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Black Gold Watch</h1>
+                            <p>Rp 2.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria2.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Full Gold Watch</h1>
+                            <p>Rp 3.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria3.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Brown Watch</h1>
+                            <p>Rp 1.599.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria4.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Blue Silver Watch</h1>
+                            <p>Rp 1.499.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria5.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Gold Watch</h1>
+                            <p>Rp 2.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria6.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Black Silver Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria7.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Metal Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria8.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Black Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria9.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Blue Metal Watch</h1>
+                            <p>Rp 2.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jampria/jampria10.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Black Metal Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <!-- end card section pria -->
+
+
+            <!-- product card section wanita -->
+            <div class="product-section" id="product-section-wanita">
+            <div class="product-section-top-container">
+                <div class="section-category-container">
+                    <div class="section-category-type">
+                        <span class="blue-line"></span>
+                        <span class="section-category-text">All Watch Wanita</span>
+                    </div>
+                    <h1>Top Feminim</h1>
+                </div>
+                <div class="slideshow-buttons-container" data-slideshow="wanita">
+                    <button class="slideshow-button prev-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M15 6L9 12L15 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                    <button class="slideshow-button next-button">
+                        <svg viewBox="0 0 24 24" width="30px" height="30px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9 6L15 12L9 18" stroke="rgb(64,64,64)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- product card wanita container -->
+            <div class="product-cards-container">
+                <ul>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita1.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Gold Rose Watch</h1>
+                            <p>Rp 2.500.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita2.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Gold Metal Watch</h1>
+                            <p>Rp 2.900.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita3.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Metal Watch</h1>
+                            <p>Rp 2.300.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita4.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Love Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita5.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Gold Feminim Watch</h1>
+                            <p>Rp 2.900.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita6.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Bronze Watch</h1>
+                            <p>Rp 1.500.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita7.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Blue Moon Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita8.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Red Feminim Watch</h1>
+                            <p>Rp 1.999.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita9.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Silver Metal Feminim Watch</h1>
+                            <p>Rp 1.899.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+                    <li class="product-card">
+                        <div class="product-image-container">
+                            <img src="img/jamwanita/jamwanita10.png" alt="jam mewah">
+                            <button class="heart-button">
+                                <svg viewBox="0 0 24 24" width="22px" height="22px" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                            </button>
+                        </div>
+                        <div class="product-text-container">
+                            <h1>Flower Feminim Watch</h1>
+                            <p>Rp 1.599.000</p>
+                            <button class="blue-button">
+                                Add To Cart
+                            </button>
+                        </div>
+                    </li>
+            
+                </ul>
+            </div>
+            <!-- end card section wanita -->
+            
+            
+           
+
+          </div>
+          
+    </div>
+</body>
+<footer>
+    <div id="footer-top">
+        <img src="img/logo.png" alt="logo" width="220px" height="110px">
+        <div id="footer-socials-wrapper">
+            <div class="footer-social">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-telephone-fill" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/>
+                </svg>
+                <span>+62 888 0239 6722</span>
+            </div>
+            <div class="footer-social">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-instagram" viewBox="0 0 16 16">
+                     <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.9 3.9 0 0 0-1.417.923A3.9 3.9 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.9 3.9 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.9 3.9 0 0 0-.923-1.417A3.9 3.9 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599s.453.546.598.92c.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.5 2.5 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.5 2.5 0 0 1-.92-.598 2.5 2.5 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233s.008-2.388.046-3.231c.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92s.546-.453.92-.598c.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92m-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217m0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334"/>
+                </svg>
+                <a href="https://www.instagram.com/faisalsidik20"> Instagram</a>
+            </div>
+            <div class="footer-social">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" class="bi bi-tiktok" viewBox="0 0 16 16">
+                    <path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z"/>
+                </svg>
+                <a href="https://www.tiktok.com/@ssg_sal"> Tiktok</a>
+            </div>
+        </div>
+    </div>
+    <div id="footer-bottom">
+        <ul>
+            <li>
+                <a href="index.html">Home</a>
+            </li>
+            <li>
+                <a href="products.html">Product</a>
+            </li>
+            <li>
+                <a href="#">Service</a>
+            </li>
+            <li>
+                <a href="#">About</a>
+            </li>
+        </ul>
+        <p>
+            Copyright 2025 ztime. All right reserved.
+        </p>
+    </div>
+</footer>
+</html>

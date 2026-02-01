@@ -2,7 +2,7 @@
 
 Ini adalah contoh project e-commerce toko jam tangan.
 
-**[🔗 Lihat Demo Website](https://faisalsidik20.github.io/ztime-watch-store/index.html)**
+**[🔗 Lihat Demo Website](https://faisalsidik20.github.io/ztime-watch-store/ztime/index.html)**
 
 ## Fitur:
 - Katalog produk jam tangan pria & wanita
